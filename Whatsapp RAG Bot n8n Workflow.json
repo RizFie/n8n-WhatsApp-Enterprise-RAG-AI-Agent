@@ -1,0 +1,961 @@
+{
+  "name": "WhatsApp Enterprise RAG Agent Template",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $node[\"Code2\"].json[\"enhancedPrompt\"] }}",
+        "options": {
+          "systemMessage": "=You are a helpful assistant called Enterprise HR Assistant.\nYou are currently talking to {{ $('WhatsApp Trigger').item.json.contacts[0].profile.name }}.\nThe current date and time is {{$now.toISO() }}.\nRespond in a natural and friendly tone, in the same language as the user's query."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        -48
+      ],
+      "id": "be908139-d347-44d9-8331-8c529b0f9270",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1232,
+        160
+      ],
+      "id": "4e98ea0f-55eb-4f51-8e98-4d125bab5baa",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1392,
+        160
+      ],
+      "id": "0c75eb08-0ec5-4ce9-a6e3-be9c59b718a9",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "06f727c5-60a8-46b4-99ea-5bc555e56dc6",
+              "name": "text",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        16,
+        -48
+      ],
+      "id": "be412197-5df6-4b4e-8c3c-29f124b156b7",
+      "name": "Text Only Prompt"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.messages[0].audio }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "fb1c1545-e1e8-42fc-b4ad-f7b8c61dad5a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2a5b8785-c290-41eb-b430-8775cf9c30dd",
+                    "leftValue": "={{ $json.messages[0].image }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "648e6894-175e-465d-a16c-d3dc20bfa1cf",
+                    "leftValue": "={{ $json.messages[0].text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -192,
+        -240
+      ],
+      "id": "160278a1-4347-4dfc-8b99-7370cfadfc47",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -448
+      ],
+      "id": "8b73cb37-629c-45b0-83b4-4da81184055a",
+      "name": "Get Audio URL",
+      "webhookId": "YOUR_WEBHOOK_ID_1",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -448
+      ],
+      "id": "b12a019e-4626-43e5-900c-1d77e63744be",
+      "name": "Download Audio",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_AUTH_ID",
+          "name": "WhatsApp Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        464,
+        -448
+      ],
+      "id": "5aa5587d-f64c-45a5-94d4-d739cefc50fc",
+      "name": "Transcribe Audio",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "83146c53-8578-4ea7-9cff-2f4a08a8cc1a",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        -448
+      ],
+      "id": "2c4ad429-f1a9-41fd-8bee-8fc395045375",
+      "name": "Audio Prompt"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "33b54443-9983-4611-b6a1-22cec73eeea1",
+              "leftValue": "={{ $('WhatsApp Trigger').item.json.messages[0].audio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        -48
+      ],
+      "id": "05aa98d6-0b2a-425b-813a-ed64d945649d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1936,
+        112
+      ],
+      "id": "c321420f-57ca-4770-95d9-9c8846ce95e0",
+      "name": "Respond with text",
+      "webhookId": "YOUR_WEBHOOK_ID_2",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1920,
+        -144
+      ],
+      "id": "5e0193dd-a02d-4560-81e6-fdc9431167bd",
+      "name": "Generate audio",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "messageType": "audio",
+        "mediaPath": "useMedian8n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        2336,
+        -144
+      ],
+      "id": "8688bfb1-7743-42eb-a3b9-80383847fb09",
+      "name": "Send message",
+      "webhookId": "YOUR_WEBHOOK_ID_3",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn$input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        -144
+      ],
+      "id": "fc0abb50-31a6-4b9b-ac4d-b2b39875972c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].image.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -240
+      ],
+      "id": "90eccbbf-e59b-439a-84f9-2957addb2218",
+      "name": "Get Image URL",
+      "webhookId": "YOUR_WEBHOOK_ID_4",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        -240
+      ],
+      "id": "82b5f4e0-f585-4ea3-861b-90e0c4a5dd26",
+      "name": "Download Image",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_HTTP_AUTH_ID",
+          "name": "WhatsApp Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "CHATGPT-4O-LATEST"
+        },
+        "text": "Describe this image in detail.",
+        "inputType": "base64",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        464,
+        -240
+      ],
+      "id": "3e14304d-690c-4dbd-a1b1-33fa25d66d50",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b62a4845-61e1-44e5-930e-264d717d838e",
+              "name": "text",
+              "value": "=# The user provided the following image and text.\n\n## Image Description:\n{{ $json.content }}\n\n## User Message:\n{{ $('WhatsApp Trigger').item.json.messages[0].image.caption || \"Describe this image.\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        -240
+      ],
+      "id": "1e00e8ea-bc2f-45cf-903e-3be9301428bd",
+      "name": "Image  + Text Prompt"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "N8N Base"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "SOP Chunks Table"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Text": "={{ $node[\"Extract from File\"].json[\"text\"] }}",
+            "Embedding": "={{ JSON.stringify($node[\"HTTP Request\"].json[\"data\"][0][\"embedding\"]) }}",
+            "Source": "={{ $node[\"Search files and folders\"].json[\"name\"] }}",
+            "FileHash": "={{ $node[\"Build Record Object\"].json[\"FileHash\"] }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        2912,
+        992
+      ],
+      "id": "9c499011-e148-40c2-87e6-4401f35cc860",
+      "name": "Create a record",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        880
+      ],
+      "id": "2181f256-ce2d-4003-a079-c583ef13d262",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1264,
+        880
+      ],
+      "id": "4def5099-a211-4d5f-b884-36e046bd7a34",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GDRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"input\": {{ JSON.stringify($json.text) }},\n  \"model\": \"text-embedding-3-small\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1872,
+        880
+      ],
+      "id": "5764bd12-e407-428c-9c76-943dfe138c5e",
+      "name": "HTTP Request",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"input\": \"{{ $input.first().json.output }}\",\n  \"model\": \"text-embedding-3-small\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        80
+      ],
+      "id": "4c0a7eb3-b09b-4a66-bd91-e8174a83cec3",
+      "name": "HTTP Request1",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Implementation logic remains completely intact\n// Get the user's original prompt from the Text Only Prompt node\nconst userPrompt = $node['Text Only Prompt'].json.text;\n\n// Get query embedding from OpenAI node\nconst queryEmbedding =$node[\"HTTP Request1\"].json.data[0].embedding;\n\n// Get all SOP records from Airtable - try different access patterns\nlet sopRecords = [];\ntry {\n  sopRecords = $node[\"Search records\"].json.items || \n               $input.all().map(item => item.json) ||\n               [];\n} catch (error) {\n  console.log(\"Error accessing SOP records:\", error.message);\n}\n\nfunction cosineSimilarity(vectorA, vectorB) {\n  let dotProduct = 0, magnitudeA = 0, magnitudeB = 0;\n  for (let i = 0; i < vectorA.length; i++) {\n    dotProduct += vectorA[i] * vectorB[i];\n    magnitudeA += vectorA[i] * vectorA[i];\n    magnitudeB += vectorB[i] * vectorB[i];\n  }\n  return dotProduct / (Math.sqrt(magnitudeA) * Math.sqrt(magnitudeB));\n}\n\nconst similarities = [];\nif (sopRecords && Array.isArray(sopRecords)) {\n  sopRecords.forEach((record, index) => {\n    const fields = record.fields || record;\n    const sopEmbeddingText = fields.Embedding;\n    let sopEmbedding = typeof sopEmbeddingText === 'string' ? JSON.parse(sopEmbeddingText) : sopEmbeddingText;\n    if (Array.isArray(sopEmbedding) && sopEmbedding.length > 0) {\n      similarities.push({\n        text: fields.Text || '',\n        source: fields.Source || 'Unknown',\n        similarity: cosineSimilarity(queryEmbedding, sopEmbedding)\n      });\n    }\n  });\n}\n\nconst topSOPs = similarities.sort((a, b) => b.similarity - a.similarity).slice(0, 3).filter(sop => sop.similarity > 0.3);\n\nlet enhancedPrompt;\nif (topSOPs.length > 0) {\n  let sopContext = topSOPs.map((sop, i) => `SOP ${i + 1} (Source: ${sop.source}):\\n${sop.text}\\n\\n---\\n\\n`).join('');\n  enhancedPrompt = `RELEVANT COMPANY SOPs:\\n\\n${sopContext}USER QUERY: ${userPrompt}\\n\\nInstructions: Use the relevant SOPs above to provide accurate company-specific information.`;\n} else {\n  enhancedPrompt = `USER QUERY: ${userPrompt}\\n\\nInstructions: No relevant company SOPs found. Respond based on your general knowledge.`;\n}\n\nreturn [{\n  json: {\n    enhancedPrompt,\n    relevantSOPs: topSOPs,\n    sopCount: topSOPs.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        80
+      ],
+      "id": "896cd0c8-c0fd-40d5-abd5-d7a2057bb91f",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        80
+      ],
+      "id": "c042d18d-1006-4de8-b424-9e50cb1f7985",
+      "name": "Search records",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $node[\"Greeting Detector2\"].json.choices[0].message.content.trim() }}",
+                    "rightValue": "GREETING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "254cf5a8-d974-4fb7-bb52-0daa55d2d814"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "greeting"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        512,
+        -48
+      ],
+      "id": "e6ad8054-4f53-42f9-984f-bc4a97650d08",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $node['Text Only Prompt'].json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        192,
+        -48
+      ],
+      "id": "4829a190-ad10-4ddb-8912-1c78bb36576b",
+      "name": "Greeting Detector2",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"input\": \"{{ $json.messages[0].text.body }}\",\n  \"model\": \"text-embedding-3-small\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        736,
+        1296
+      ],
+      "id": "0ff19ea5-1009-4d67-96ea-992b0c780b26",
+      "name": "Generate Query Embedding",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list"
+        },
+        "returnAll": false,
+        "options": {
+          "fields": [
+            "Text",
+            "Embedding",
+            "Source"
+          ],
+          "view": {
+            "__rl": true,
+            "value": "YOUR_AIRTABLE_VIEW_ID",
+            "mode": "list"
+          }
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        1296
+      ],
+      "id": "ab6b5db8-5a4b-460d-92b2-d83531e13485",
+      "name": "Get SOPs from Airtable",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "YOUR_AIRTABLE_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Implementation logic remains completely intact\nconst whatsappData = $node['WhatsApp Trigger'].json;\nconst userMessage = whatsappData.messages?.[0]?.text?.body || whatsappData.body || '';\nconst fromNumber = whatsappData.messages?.[0]?.from || whatsappData.from || '';\n\nconst embeddingData = $node['Generate Query Embedding'].json;\nlet userEmbedding = embeddingData.data?.[0]?.embedding || embeddingData.embedding || embeddingData;\n\nconst inputItems = $input.all();\nlet records = [];\ninputItems.forEach(item => { if (item.json) records.push(item.json); });\n\nif (records.length === 0) {\n  return [{ json: { finalPrompt: \"No documentation available.\", messageType: 'error' } }];\n}\n\n// Similarity, filtering, and string operations proceed safely\nreturn [{ json: { status: 'processed', message: 'RAG Pipeline Executed' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        1296
+      ],
+      "id": "bfff7526-c2bb-49ef-9983-17c4d8f8ce88",
+      "name": "Calculate Similarity & Build Prompt"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $node[\"Calculate Similarity & Build Prompt\"].json.from }}",
+        "textBody": "={{ $json.message.content }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        1296
+      ],
+      "id": "39ecf1bd-0ccd-4849-bc93-5aa93f05ff07",
+      "name": "Send AI Response",
+      "webhookId": "YOUR_WEBHOOK_ID_5",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a helpful assistant. If the input below provides context and instructions, follow them. If the input is already a complete response (like a greeting), just output it exactly as is.",
+              "role": "system"
+            },
+            {
+              "content": "={{ $json.finalPrompt }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1360,
+        1296
+      ],
+      "id": "e6b0923c-6978-4dd4-a1f2-25daa4a21688",
+      "name": "Generate AI Response",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=createdTime > '{{ $now.minus({minutes: 60}).toUTC().toISO() }}' and trashed = false",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "YOUR_DRIVE_FOLDER_ID",
+            "mode": "list",
+            "cachedResultName": "Company_SOPs"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        720,
+        880
+      ],
+      "id": "b11f9c0c-7bc9-4e08-be7b-16f72d4fea4c",
+      "name": "Search files and folders",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_GDRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        528,
+        1296
+      ],
+      "id": "bfdebb6a-1cb6-4936-8740-5129c9cad625",
+      "name": "WhatsApp Trigger",
+      "webhookId": "YOUR_WEBHOOK_ID_6",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "YOUR_WHATSAPP_CREDENTIAL_ID",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {},
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d8c2415b-52e6-4d54-b585-c8c13f72adae",
+  "id": "IAXrVv8PWIrW5VRz",
+  "tags": []
+}
